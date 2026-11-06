@@ -1,0 +1,6 @@
+{
+  "name": "Hills Blind Lab 현장 포스팅 업로더",
+  "description": "Hills Blind Lab 현장 시공 사진 규격 파일명 자동 생성, AI 인스타그램 캡션 작성 및 n8n 자동화 포스팅 업로더",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
