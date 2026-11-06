@@ -19,9 +19,11 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
         {/* Zone 1: Wordmark */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-            H
-          </div>
+          <img
+            src="/assets/aistudio/bluehill_logo_47aa79a8.jpg"
+            alt="Hills Blind Lab Logo"
+            className="w-8 h-8 rounded-full object-cover shadow-xs border border-slate-200 shrink-0"
+          />
           <div>
             <span className="text-base font-bold tracking-tight text-slate-900 whitespace-nowrap">
               Hills Blind Lab
