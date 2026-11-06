@@ -21,6 +21,10 @@ import {
   getAccessToken,
 } from './services/driveService';
 import {
+  extractLocationFromImage,
+  getCurrentDeviceLocation,
+} from './services/locationService';
+import {
   Send,
   CheckCircle2,
   AlertCircle,
@@ -35,6 +39,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'uploader' | 'history'>('uploader');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFolderSelectorOpen, setIsFolderSelectorOpen] = useState(false);
+
+  // GPS Auto-Detection State
+  const [detectedLocationSource, setDetectedLocationSource] = useState<'photo_exif' | 'device_gps' | null>(null);
+  const [detectedLocationDetails, setDetectedLocationDetails] = useState<string | null>(null);
+  const [isLocatingDevice, setIsLocatingDevice] = useState(false);
 
   // Google Auth & Drive State
   const [user, setUser] = useState<User | null>(null);
@@ -176,8 +185,8 @@ export default function App() {
     };
   }, [suburb, locationCode, windowSeq, productCode, file]);
 
-  // Handle image selection
-  const handleFileSelect = (selectedFile: File) => {
+  // Handle image selection with EXIF GPS auto-detection
+  const handleFileSelect = async (selectedFile: File) => {
     if (filePreviewUrl) {
       URL.revokeObjectURL(filePreviewUrl);
     }
@@ -187,6 +196,50 @@ export default function App() {
     setSubmitSuccess(null);
     setSubmitError(null);
     setLastUploadedLink(null);
+    setDetectedLocationSource(null);
+    setDetectedLocationDetails(null);
+
+    // Automatically inspect EXIF GPS metadata embedded in the photo
+    try {
+      const gpsResult = await extractLocationFromImage(selectedFile);
+      if (gpsResult) {
+        setPostcode(gpsResult.postcode);
+        setSuburb(gpsResult.suburb);
+        setDetectedLocationSource('photo_exif');
+        setDetectedLocationDetails(
+          gpsResult.rawSuburbName
+            ? `${gpsResult.rawSuburbName} (${gpsResult.postcode})`
+            : `${gpsResult.suburb} (${gpsResult.postcode})`
+        );
+      }
+    } catch (e) {
+      console.warn('GPS extraction error:', e);
+    }
+  };
+
+  // Device GPS auto-detection for on-site technicians
+  const handleDetectDeviceLocation = async () => {
+    setIsLocatingDevice(true);
+    setSubmitError(null);
+    try {
+      const result = await getCurrentDeviceLocation();
+      if (result) {
+        setPostcode(result.postcode);
+        setSuburb(result.suburb);
+        setDetectedLocationSource('device_gps');
+        setDetectedLocationDetails(
+          result.rawSuburbName
+            ? `${result.rawSuburbName} (${result.postcode})`
+            : `${result.suburb} (${result.postcode})`
+        );
+      } else {
+        setSubmitError('위치를 감지할 수 없습니다. 브라우저의 위치(GPS) 권한을 허용해 주세요.');
+      }
+    } catch (err: any) {
+      setSubmitError(err.message || '위치 감지 실패');
+    } finally {
+      setIsLocatingDevice(false);
+    }
   };
 
   const handleClearFile = () => {
@@ -195,6 +248,8 @@ export default function App() {
     }
     setFile(null);
     setFilePreviewUrl(null);
+    setDetectedLocationSource(null);
+    setDetectedLocationDetails(null);
   };
 
   // Convert image to base64 for webhook
@@ -475,6 +530,10 @@ export default function App() {
               suburb={suburb}
               onChangePostcode={setPostcode}
               onChangeSuburb={setSuburb}
+              detectedSource={detectedLocationSource}
+              detectedDetails={detectedLocationDetails}
+              onTriggerDeviceGps={handleDetectDeviceLocation}
+              isLocating={isLocatingDevice}
             />
 
             {/* Step 3: Location and Clockwise Window */}

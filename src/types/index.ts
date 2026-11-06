@@ -2,6 +2,8 @@ export interface SuburbEntry {
   postcode: string;
   suburb: string;
   display: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface RoomOption {
@@ -49,4 +51,10 @@ export interface HistoryRecord {
   driveFileId?: string;
   driveWebViewLink?: string;
   errorMessage?: string;
+}
+
+export interface RecentFolder {
+  id: string;
+  name: string;
+  lastUsedAt: number;
 }

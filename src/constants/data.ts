@@ -3,27 +3,53 @@ import { RoomOption, ProductOption, SuburbEntry } from '../types';
 export const DEFAULT_N8N_WEBHOOK_URL = 'https://your-n8n-instance.com/webhook/upload-post';
 
 export const POSTCODE_DATABASE: SuburbEntry[] = [
-  { postcode: '2153', suburb: 'BaulkhamHills', display: '2153 - Baulkham Hills / Bella Vista / Norwest' },
-  { postcode: '2154', suburb: 'CastleHill', display: '2154 - Castle Hill' },
-  { postcode: '2155', suburb: 'Kellyville', display: '2155 - Kellyville / Rouse Hill / Beaumont Hills' },
-  { postcode: '2156', suburb: 'Glenhaven', display: '2156 - Glenhaven / Annangrove / Kenthurst' },
-  { postcode: '2158', suburb: 'Dural', display: '2158 - Dural / Middle Dural' },
-  { postcode: '2120', suburb: 'PennantHills', display: '2120 - Pennant Hills / Thornleigh' },
-  { postcode: '2125', suburb: 'WestPennantHills', display: '2125 - West Pennant Hills' },
-  { postcode: '2151', suburb: 'NorthParramatta', display: '2151 - North Parramatta / North Rocks' },
-  { postcode: '2118', suburb: 'Carlingford', display: '2118 - Carlingford' },
-  { postcode: '2126', suburb: 'Cherrybrook', display: '2126 - Cherrybrook' },
-  { postcode: '2769', suburb: 'ThePonds', display: '2769 - The Ponds' },
-  { postcode: '2152', suburb: 'Northmead', display: '2152 - Northmead' },
-  { postcode: '2145', suburb: 'Wentworthville', display: '2145 - Wentworthville / Westmead' },
-  { postcode: '2768', suburb: 'StanhopeGardens', display: '2768 - Stanhope Gardens / Glenwood' },
-  { postcode: '2763', suburb: 'QuakersHill', display: '2763 - Quakers Hill / Acacia Gardens' },
-  { postcode: '2148', suburb: 'Blacktown', display: '2148 - Blacktown' },
-  { postcode: '2121', suburb: 'Epping', display: '2121 - Epping' },
-  { postcode: '2122', suburb: 'Eastwood', display: '2122 - Eastwood / Marsfield' },
-  { postcode: '2077', suburb: 'Hornsby', display: '2077 - Hornsby / Waitara' },
-  { postcode: '2113', suburb: 'MacquariePark', display: '2113 - Macquarie Park / North Ryde' },
+  { postcode: '2154', suburb: 'CastleHill', display: '2154 - Castle Hill', lat: -33.7311, lng: 151.0042 },
+  { postcode: '2153', suburb: 'BaulkhamHills', display: '2153 - Baulkham Hills / Bella Vista / Norwest', lat: -33.7600, lng: 150.9900 },
+  { postcode: '2155', suburb: 'Kellyville', display: '2155 - Kellyville / Rouse Hill / Beaumont Hills', lat: -33.7080, lng: 150.9570 },
+  { postcode: '2156', suburb: 'Glenhaven', display: '2156 - Glenhaven / Annangrove / Kenthurst', lat: -33.7050, lng: 151.0250 },
+  { postcode: '2158', suburb: 'Dural', display: '2158 - Dural / Middle Dural', lat: -33.6820, lng: 151.0370 },
+  { postcode: '2125', suburb: 'WestPennantHills', display: '2125 - West Pennant Hills', lat: -33.7510, lng: 151.0340 },
+  { postcode: '2120', suburb: 'PennantHills', display: '2120 - Pennant Hills / Thornleigh', lat: -33.7400, lng: 151.0660 },
+  { postcode: '2126', suburb: 'Cherrybrook', display: '2126 - Cherrybrook', lat: -33.7220, lng: 151.0480 },
+  { postcode: '2118', suburb: 'Carlingford', display: '2118 - Carlingford', lat: -33.7740, lng: 151.0500 },
+  { postcode: '2151', suburb: 'NorthParramatta', display: '2151 - North Parramatta / North Rocks', lat: -33.7970, lng: 151.0070 },
+  { postcode: '2769', suburb: 'ThePonds', display: '2769 - The Ponds', lat: -33.6980, lng: 150.9060 },
+  { postcode: '2152', suburb: 'Northmead', display: '2152 - Northmead', lat: -33.7920, lng: 150.9930 },
+  { postcode: '2145', suburb: 'Wentworthville', display: '2145 - Wentworthville / Westmead', lat: -33.8070, lng: 150.9720 },
+  { postcode: '2768', suburb: 'StanhopeGardens', display: '2768 - Stanhope Gardens / Glenwood', lat: -33.7210, lng: 150.9160 },
+  { postcode: '2763', suburb: 'QuakersHill', display: '2763 - Quakers Hill / Acacia Gardens', lat: -33.7370, lng: 150.8780 },
+  { postcode: '2148', suburb: 'Blacktown', display: '2148 - Blacktown', lat: -33.7710, lng: 150.9060 },
+  { postcode: '2121', suburb: 'Epping', display: '2121 - Epping', lat: -33.7730, lng: 151.0820 },
+  { postcode: '2122', suburb: 'Eastwood', display: '2122 - Eastwood / Marsfield', lat: -33.7900, lng: 151.0820 },
+  { postcode: '2077', suburb: 'Hornsby', display: '2077 - Hornsby / Waitara', lat: -33.7030, lng: 151.1000 },
+  { postcode: '2113', suburb: 'MacquariePark', display: '2113 - Macquarie Park / North Ryde', lat: -33.7780, lng: 151.1250 },
 ];
+
+/**
+ * Finds the nearest suburb in our database for given latitude and longitude.
+ */
+export function findNearestSuburb(lat: number, lng: number): SuburbEntry | null {
+  let nearest: SuburbEntry | null = null;
+  let minDistance = Infinity;
+
+  for (const entry of POSTCODE_DATABASE) {
+    if (entry.lat !== undefined && entry.lng !== undefined) {
+      const dLat = entry.lat - lat;
+      const dLng = entry.lng - lng;
+      const distSq = dLat * dLat + dLng * dLng;
+      if (distSq < minDistance) {
+        minDistance = distSq;
+        nearest = entry;
+      }
+    }
+  }
+
+  // If distance is reasonably within Greater Sydney (~0.3 deg ~= 33km)
+  if (minDistance < 0.25) {
+    return nearest;
+  }
+  return nearest;
+}
 
 export const ROOM_OPTIONS: RoomOption[] = [
   { code: 'L', name: 'Living Room', nameKo: '거실' },

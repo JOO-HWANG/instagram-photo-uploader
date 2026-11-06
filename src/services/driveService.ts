@@ -68,11 +68,7 @@ export const getAccessToken = async (): Promise<string | null> => {
 export const googleLogout = async () => {
   await signOut(auth);
   cachedAccessToken = null;
-  try {
-    localStorage.removeItem('hills_drive_folder_id');
-  } catch {
-    // ignore
-  }
+  // Retain user's last used folder preference in localStorage so it remains the default on next login
 };
 
 export interface DriveUploadResult {

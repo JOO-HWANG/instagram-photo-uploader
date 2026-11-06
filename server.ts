@@ -163,6 +163,55 @@ app.post('/api/webhook-proxy', async (req, res) => {
   }
 });
 
+// API: Reverse Geocode (Lat/Lng -> Suburb, Postcode)
+app.get('/api/reverse-geocode', async (req, res) => {
+  try {
+    const lat = req.query.lat as string;
+    const lng = req.query.lng as string;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'lat and lng are required' });
+    }
+
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=14&addressdetails=1`,
+      {
+        headers: {
+          'User-Agent': 'HillsBlindLab-FieldUploader/1.0',
+          'Accept-Language': 'en',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      return res.status(502).json({ error: 'Geocoding service unavailable' });
+    }
+
+    const data = await response.json();
+    const address = data.address || {};
+    const suburb =
+      address.suburb ||
+      address.neighbourhood ||
+      address.town ||
+      address.city_district ||
+      address.village ||
+      address.city ||
+      '';
+    const postcode = address.postcode || '';
+
+    return res.json({
+      suburb,
+      postcode,
+      state: address.state || '',
+      country: address.country || '',
+      displayName: data.display_name,
+    });
+  } catch (error: any) {
+    console.error('Reverse geocode error:', error);
+    return res.status(500).json({ error: error.message || 'Geocoding failed' });
+  }
+});
+
 // Setup Vite in Dev or serve static in Prod
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

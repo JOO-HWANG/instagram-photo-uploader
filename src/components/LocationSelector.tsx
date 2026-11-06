@@ -1,12 +1,16 @@
 import React from 'react';
 import { POSTCODE_DATABASE, cleanText } from '../constants/data';
-import { MapPin, Search } from 'lucide-react';
+import { MapPin, Navigation, RefreshCw, CheckCircle2, Camera } from 'lucide-react';
 
 interface LocationSelectorProps {
   postcode: string;
   suburb: string;
   onChangePostcode: (val: string) => void;
   onChangeSuburb: (val: string) => void;
+  detectedSource?: 'photo_exif' | 'device_gps' | null;
+  detectedDetails?: string | null;
+  onTriggerDeviceGps?: () => void;
+  isLocating?: boolean;
 }
 
 export const LocationSelector: React.FC<LocationSelectorProps> = ({
@@ -14,6 +18,10 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   suburb,
   onChangePostcode,
   onChangeSuburb,
+  detectedSource,
+  detectedDetails,
+  onTriggerDeviceGps,
+  isLocating = false,
 }) => {
   const handlePostcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.trim();
@@ -34,8 +42,8 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const cleanedSuburb = cleanText(suburb) || 'Hills';
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs">
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-3">
+      <div className="flex items-center justify-between">
         <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
           <span className="w-5 h-5 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center font-bold">
             2
@@ -43,8 +51,58 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
           <span>현장 지역 (Postcode & Suburb)</span>
           <span className="text-xs text-rose-500 font-normal">*필수</span>
         </label>
-        <span className="text-xs text-slate-500 font-medium">Hills District & Sydney</span>
+
+        {onTriggerDeviceGps && (
+          <button
+            type="button"
+            onClick={onTriggerDeviceGps}
+            disabled={isLocating}
+            title="스마트폰 현재 위치(GPS)로 현장 지역 자동 맞춤"
+            className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-blue-50 hover:bg-blue-100/70 border border-blue-200 transition-colors disabled:opacity-50 min-h-[34px]"
+          >
+            {isLocating ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>위치 감지 중...</span>
+              </>
+            ) : (
+              <>
+                <Navigation className="w-3.5 h-3.5 text-blue-600" />
+                <span>현재 GPS 위치로 감지</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
+
+      {/* GPS Detection Notification Banner */}
+      {detectedSource === 'photo_exif' && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-start gap-2 shadow-2xs animate-in fade-in">
+          <Camera className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="leading-tight">
+            <span className="font-bold">사진 GPS 위치 감지 완료! </span>
+            <span>시공 사진에 포함된 촬영 위치 메타데이터(EXIF)에서 </span>
+            <strong className="underline decoration-emerald-500 font-bold">
+              {detectedDetails || `${suburb} (${postcode})`}
+            </strong>
+            <span>(으)로 자동 설정되었습니다.</span>
+          </div>
+        </div>
+      )}
+
+      {detectedSource === 'device_gps' && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2 shadow-2xs animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <div className="leading-tight">
+            <span className="font-bold">스마트폰 GPS 위치 감지 완료! </span>
+            <span>현재 계신 현장 위치를 기반으로 </span>
+            <strong className="underline decoration-blue-500 font-bold">
+              {detectedDetails || `${suburb} (${postcode})`}
+            </strong>
+            <span>(으)로 자동 설정되었습니다.</span>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
         <div className="sm:col-span-2">
@@ -88,7 +146,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       </div>
 
       {/* Quick Select Chips */}
-      <div className="mt-3 pt-3 border-t border-slate-100">
+      <div className="pt-2 border-t border-slate-100">
         <div className="text-[11px] font-semibold text-slate-500 mb-2 flex items-center gap-1">
           <MapPin className="w-3 h-3 text-slate-400" />
           <span>자주 시공하는 주요 힐스 지역 원클릭 선택:</span>
@@ -114,7 +172,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         </div>
       </div>
 
-      <div className="mt-2.5 text-[11px] text-slate-500 flex items-center justify-between">
+      <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1">
         <span>규격 파일명 변환 접두사:</span>
         <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
           {cleanedSuburb}

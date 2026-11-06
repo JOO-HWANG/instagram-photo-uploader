@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, FolderPlus, Link, Check, ExternalLink, X, HelpCircle, HardDrive, RefreshCw } from 'lucide-react';
+import { RecentFolder } from '../types';
+import {
+  Folder,
+  Check,
+  ExternalLink,
+  X,
+  HelpCircle,
+  HardDrive,
+  RefreshCw,
+  Clock,
+  Trash2,
+} from 'lucide-react';
 
 interface DriveFolderSelectorModalProps {
   isOpen: boolean;
@@ -31,26 +42,79 @@ export const DriveFolderSelectorModal: React.FC<DriveFolderSelectorModalProps> =
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Recent folders list from localStorage
+  const [recentFolders, setRecentFolders] = useState<RecentFolder[]>(() => {
+    try {
+      const saved = localStorage.getItem('hills_recent_folders');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   useEffect(() => {
     if (isOpen) {
       setFolderInput(currentFolderId ? `https://drive.google.com/drive/folders/${currentFolderId}` : '');
       setFolderNickName(currentFolderName || '');
       setPickerError(null);
       setSaveSuccess(false);
+
+      // Refresh recent folders
+      try {
+        const saved = localStorage.getItem('hills_recent_folders');
+        if (saved) {
+          setRecentFolders(JSON.parse(saved));
+        }
+      } catch {
+        // ignore
+      }
     }
   }, [isOpen, currentFolderId, currentFolderName]);
 
   if (!isOpen) return null;
 
+  // Save selected folder into recent list
+  const addFolderToRecent = (id: string, name: string) => {
+    setRecentFolders((prev) => {
+      const filtered = prev.filter((item) => item.id !== id);
+      const updated: RecentFolder[] = [
+        {
+          id,
+          name,
+          lastUsedAt: Date.now(),
+        },
+        ...filtered,
+      ].slice(0, 6); // Keep last 6 folders
+
+      try {
+        localStorage.setItem('hills_recent_folders', JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  };
+
+  const removeFolderFromRecent = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setRecentFolders((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem('hills_recent_folders', JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  };
+
   // Extracts Google Drive Folder ID from a URL or raw ID string
   const extractFolderId = (input: string): string => {
     const trimmed = input.trim();
-    // Matches https://drive.google.com/drive/folders/FOLDER_ID or /u/0/folders/FOLDER_ID
     const match = trimmed.match(/\/folders\/([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
       return match[1];
     }
-    // If user pasted just the ID string directly
     if (/^[a-zA-Z0-9_-]{15,}$/.test(trimmed)) {
       return trimmed;
     }
@@ -83,16 +147,26 @@ export const DriveFolderSelectorModal: React.FC<DriveFolderSelectorModalProps> =
           }
         }
       } catch (e) {
-        // Fallback to generic name if direct metadata query fails due to scope
+        // fallback
       }
     }
 
     const finalName = resolvedName || '지정된 Google Drive 폴더';
+    addFolderToRecent(extractedId, finalName);
     onSelectFolder(extractedId, finalName);
     setSaveSuccess(true);
     setTimeout(() => {
       onClose();
     }, 700);
+  };
+
+  const handleSelectRecent = (folder: RecentFolder) => {
+    addFolderToRecent(folder.id, folder.name);
+    onSelectFolder(folder.id, folder.name);
+    setSaveSuccess(true);
+    setTimeout(() => {
+      onClose();
+    }, 600);
   };
 
   const handleResetToDefault = () => {
@@ -160,6 +234,7 @@ export const DriveFolderSelectorModal: React.FC<DriveFolderSelectorModalProps> =
               if (doc) {
                 const pickedId = doc.id;
                 const pickedName = doc.name || '선택한 폴더';
+                addFolderToRecent(pickedId, pickedName);
                 onSelectFolder(pickedId, pickedName);
                 onClose();
               }
@@ -213,9 +288,9 @@ export const DriveFolderSelectorModal: React.FC<DriveFolderSelectorModalProps> =
 
         {/* Current Selected Folder info */}
         <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-          <div className="text-xs font-semibold text-slate-500">현재 설정된 저장 위치:</div>
+          <div className="text-xs font-semibold text-slate-500">현재 기본 저장 위치:</div>
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-slate-900">
+            <div className="flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-slate-900 min-w-0">
               <Folder className="w-4 h-4 text-emerald-600 shrink-0" />
               <span className="truncate">{currentFolderName || 'Hills Blind Lab (기본 자동생성)'}</span>
             </div>
@@ -233,10 +308,81 @@ export const DriveFolderSelectorModal: React.FC<DriveFolderSelectorModalProps> =
           </div>
         </div>
 
+        {/* Recent Folders Quick Selection List */}
+        {recentFolders.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-blue-600" />
+                <span>최근 사용한 폴더 (클릭 시 즉시 기본값으로 설정)</span>
+              </span>
+              <span className="text-[11px] text-slate-400 font-normal">
+                {recentFolders.length}개 기억됨
+              </span>
+            </div>
+
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              {recentFolders.map((rf) => {
+                const isCurrent = rf.id === currentFolderId;
+                const formattedDate = new Date(rf.lastUsedAt).toLocaleDateString('ko-KR', {
+                  month: 'numeric',
+                  day: 'numeric',
+                });
+
+                return (
+                  <div
+                    key={rf.id}
+                    onClick={() => handleSelectRecent(rf)}
+                    className={`w-full p-2.5 rounded-lg border text-left flex items-center justify-between gap-2 transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'border-emerald-500 bg-emerald-50/80 ring-1 ring-emerald-500/30'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Folder className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-emerald-600' : 'text-slate-400'}`} />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-slate-900 truncate">
+                          {rf.name}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          최근 사용: {formattedDate}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isCurrent ? (
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          <span>현재 기본</span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-blue-600 font-medium px-2 py-0.5 hover:bg-blue-50 rounded">
+                          이 폴더 사용
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={(e) => removeFolderFromRecent(e, rf.id)}
+                        title="최근 목록에서 삭제"
+                        className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Method 1: Google Picker Button */}
-        <div className="space-y-2">
+        <div className="space-y-2 pt-1 border-t border-slate-100">
           <div className="text-xs font-bold text-slate-800">
-            방법 1. Google Drive 폴더 브라우저로 직접 선택
+            새 폴더 지정 방법 1. Google Drive 폴더 브라우저로 선택
           </div>
           <button
             type="button"
@@ -267,7 +413,7 @@ export const DriveFolderSelectorModal: React.FC<DriveFolderSelectorModalProps> =
         {/* Method 2: Paste Folder URL / ID */}
         <div className="space-y-3">
           <div className="text-xs font-bold text-slate-800">
-            방법 2. 이미 만든 폴더의 링크 복사 & 붙여넣기 (가장 확실함)
+            새 폴더 지정 방법 2. 이미 만든 폴더의 링크 복사 & 붙여넣기
           </div>
 
           <div>
@@ -320,7 +466,7 @@ export const DriveFolderSelectorModal: React.FC<DriveFolderSelectorModalProps> =
         {saveSuccess && (
           <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 font-semibold flex items-center gap-1.5">
             <Check className="w-4 h-4 text-emerald-600" />
-            <span>저장 위치가 성공적으로 설정되었습니다!</span>
+            <span>최근 사용 폴더가 성공적으로 기본값으로 설정되었습니다!</span>
           </div>
         )}
 

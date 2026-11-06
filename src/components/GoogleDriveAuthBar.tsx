@@ -96,8 +96,8 @@ export const GoogleDriveAuthBar: React.FC<GoogleDriveAuthBarProps> = ({
           <div className="text-[11px] text-slate-600 flex flex-wrap items-center gap-1 mt-0.5">
             <span className="truncate max-w-[150px]">{user.email}</span>
             <span className="text-slate-400">·</span>
-            <span>저장 위치:</span>
-            <strong className="text-emerald-900 bg-emerald-100/80 px-1.5 py-0.2 rounded font-mono truncate max-w-[180px]">
+            <span>최근 사용 기본 폴더:</span>
+            <strong className="text-emerald-900 bg-emerald-100/80 px-1.5 py-0.2 rounded font-mono truncate max-w-[200px]">
               {folderName || 'Hills Blind Lab (기본)'}
             </strong>
           </div>
